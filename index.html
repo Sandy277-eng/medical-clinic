@@ -226,14 +226,15 @@ nav.scrolled{
   font-size:clamp(20px,2.5vw,32px);
   font-weight:300;
   font-style:italic;
-  color:rgba(245,240,235,0.5);
+  color:rgba(245,240,235,0.85);
   margin-bottom:28px;
   margin-top:8px;
 }
+
 .hero-desc{
   font-size:14px;
   line-height:1.85;
-  color:rgba(245,240,235,0.6);
+  color:rgba(245,240,235,0.8);
   max-width:480px;
   margin-bottom:44px;
   font-weight:400;
@@ -838,7 +839,6 @@ footer{
   letter-spacing:0.5px;
 }
 
-/* ── MOBILE ── */
 @media(max-width:900px){
   nav{padding:0 1.5rem;}
   .nav-links{display:none;}
@@ -848,6 +848,34 @@ footer{
   .about-grid{gap:40px;}
   .review-stage{padding:36px 24px;}
   .review-stats{grid-template-columns:repeat(2,1fr);}
+
+  /* Highly Visible Mobile Hero Text Overrides */
+  .hero-inner {
+    position: relative;
+    z-index: 10;
+    background: radial-gradient(circle at left, rgba(2,0,5,0.75) 0%, transparent 85%);
+    padding: 15px;
+    border-radius: 8px;
+  }
+  #hero .hero-title {
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.95);
+  }
+  #hero .hero-sub {
+    color: #ffffff !important;
+    font-weight: 500;
+    text-shadow: 0 2px 12px rgba(0,0,0,1), 0 4px 25px rgba(0,0,0,1);
+  }
+  #hero .hero-desc {
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: 400;
+    text-shadow: 0 2px 10px rgba(0,0,0,1), 0 4px 20px rgba(0,0,0,1);
+    max-width: 100%;
+    line-height: 1.7;
+  }
+  .s-desc {
+    color: rgba(255, 255, 255, 0.85) !important;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
 }
 @media(max-width:600px){
   .hero-stats{gap:32px;}
@@ -1273,780 +1301,286 @@ footer{
 
 <script>
 // ══════════════════════════════════════════════════════
-//  HYPER-REALISTIC HEART — THREE.JS
+//  HYPER-REALISTIC HEART — THREE.JS (MOBILE INTERACTIVE)
 // ══════════════════════════════════════════════════════
 (function(){
   const canvas = document.getElementById('heart-bg');
-  const renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  renderer.setClearColor(0x000000,0);
-  renderer.shadowMap.enabled=true;
-  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  const isMobile = window.innerWidth <= 900;
+  
+  const renderer = new THREE.WebGLRenderer({canvas, antialias: !isMobile, alpha: true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = !isMobile;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,200);
-  camera.position.set(0,0,14);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 0, 14);
 
-  // ── LIGHTS — enhanced cinematic rig ──
-  const amb = new THREE.AmbientLight(0x0d0005, 0.2);
-  scene.add(amb);
+  // Lights Rig
+  const amb = new THREE.AmbientLight(0x0d0005, 0.2); scene.add(amb);
+  const rimLight = new THREE.DirectionalLight(0xc8deff, 5.5); rimLight.position.set(-5, 9, 5); scene.add(rimLight);
+  const fillLight = new THREE.PointLight(0xcc1111, 6.5, 35); fillLight.position.set(4.5, -1.5, 6.5); scene.add(fillLight);
+  const backRim = new THREE.DirectionalLight(0x2244bb, 2.2); backRim.position.set(3, 2, -9); scene.add(backRim);
+  const innerGlow = new THREE.PointLight(0xff2200, 4.0, 12); innerGlow.position.set(0, 0, 0); scene.add(innerGlow);
 
-  // Key — cool white rim upper-left (sharp specular highlights)
-  const rimLight = new THREE.DirectionalLight(0xc8deff, 5.5);
-  rimLight.position.set(-5, 9, 5);
-  rimLight.castShadow = true;
-  scene.add(rimLight);
+  if (!isMobile) {
+    const topLight = new THREE.DirectionalLight(0xff5522, 1.2); topLight.position.set(1, 7, 3); scene.add(topLight);
+    const veinLight = new THREE.PointLight(0x2255ff, 3.8, 26); veinLight.position.set(-4.5, 2, 2.5); scene.add(veinLight);
+  }
 
-  // Fill — deep blood-crimson from front-right
-  const fillLight = new THREE.PointLight(0xcc1111, 6.5, 35);
-  fillLight.position.set(4.5, -1.5, 6.5);
-  scene.add(fillLight);
+  // Tracking Matrix
+  let mouseX = 0, mouseY = 0; let targetMouseX = 0, targetMouseY = 0; let isTouching = false;
 
-  // Back rim — cold blue-violet from behind
-  const backRim = new THREE.DirectionalLight(0x2244bb, 2.2);
-  backRim.position.set(3, 2, -9);
-  scene.add(backRim);
-
-  // Interior pulsing glow
-  const innerGlow = new THREE.PointLight(0xff2200, 4.0, 12);
-  innerGlow.position.set(0, 0, 0);
-  scene.add(innerGlow);
-
-  // Top bounce — warm orange
-  const topLight = new THREE.DirectionalLight(0xff5522, 1.2);
-  topLight.position.set(1, 7, 3);
-  scene.add(topLight);
-
-  // Blue vein accent — left side
-  const veinLight = new THREE.PointLight(0x2255ff, 3.8, 26);
-  veinLight.position.set(-4.5, 2, 2.5);
-  scene.add(veinLight);
-
-  // ── CURSOR TRACKING ──
-  let mouseX = 0, mouseY = 0;
-  let targetMouseX = 0, targetMouseY = 0;
   window.addEventListener('mousemove', (e) => {
     targetMouseX = (e.clientX / window.innerWidth - 0.5) * 2;
     targetMouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
   });
 
-  // ══════════════════════════════════════════════════════
-  //  ULTRA-REALISTIC ANATOMICAL HEART
-  // ══════════════════════════════════════════════════════
-  const heartGroup = new THREE.Group();
-  scene.add(heartGroup);
+  window.addEventListener('touchmove', (e) => {
+    if(e.touches.length > 0) {
+      isTouching = true;
+      targetMouseX = (e.touches[0].clientX / window.innerWidth - 0.5) * 2.5;
+      targetMouseY = -(e.touches[0].clientY / window.innerHeight - 0.5) * 2.5;
+    }
+  }, { passive: true });
 
-  // Wet glistening cardiac tissue material
+  window.addEventListener('touchend', () => { isTouching = false; });
+
+  // Mesh Constructor Base
+  const heartGroup = new THREE.Group(); scene.add(heartGroup);
   function cardiacMat(base, emissCol, rough=0.42, metal=0.06, cc=0.65){
     return new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(base),
-      roughness: rough,
-      metalness: metal,
-      clearcoat: cc,
-      clearcoatRoughness: 0.18,
-      reflectivity: 0.8,
-      emissive: new THREE.Color(emissCol),
-      emissiveIntensity: 0.42,
+      color: new THREE.Color(base), roughness: rough, metalness: metal, clearcoat: isMobile ? 0.1 : cc, clearcoatRoughness: 0.18, reflectivity: 0.8, emissive: new THREE.Color(emissCol), emissiveIntensity: 0.42,
     });
   }
 
-  // Deformed sphere helper with rich noise function
   function buildChamber(rx, ry, rz, latS, lonS, noiseFn){
     const pos=[], nrm=[], uv=[], idx=[];
-    for(let i=0;i<=latS;i++){
-      const phi=(i/latS)*Math.PI;
-      for(let j=0;j<=lonS;j++){
-        const th=(j/lonS)*Math.PI*2;
+    const latSegments = isMobile ? Math.floor(latS * 0.6) : latS;
+    const lonSegments = isMobile ? Math.floor(lonS * 0.6) : lonS;
+    for(let i=0; i<=latSegments; i++){
+      const phi=(i/latSegments)*Math.PI;
+      for(let j=0; j<=lonSegments; j++){
+        const th=(j/lonSegments)*Math.PI*2;
         const sp=Math.sin(phi), cp=Math.cos(phi), st=Math.sin(th), ct=Math.cos(th);
-        let x=rx*sp*ct, y=ry*cp, z=rz*sp*st;
-        const d=noiseFn(phi,th,x,y,z);
-        x+=d.dx; y+=d.dy; z+=d.dz;
-        pos.push(x,y,z);
-        const l=Math.sqrt(x*x+y*y+z*z)||1;
-        nrm.push(x/l,y/l,z/l);
-        uv.push(j/lonS,i/latS);
+        let x=rx*sp*ct, y=ry*cp, z=rz*sp*st; const d=noiseFn(phi,th,x,y,z); x+=d.dx; y+=d.dy; z+=d.dz;
+        pos.push(x,y,z); const l=Math.sqrt(x*x+y*y+z*z)||1; nrm.push(x/l,y/l,z/l); uv.push(j/lonSegments,i/latSegments);
       }
     }
-    for(let i=0;i<latS;i++)
-      for(let j=0;j<lonS;j++){
-        const a=i*(lonS+1)+j, b=a+lonS+1;
-        idx.push(a,b,a+1,b,b+1,a+1);
-      }
-    const g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-    g.setAttribute('normal',new THREE.Float32BufferAttribute(nrm,3));
-    g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
-    g.setIndex(idx);
-    g.computeVertexNormals();
-    return g;
+    for(let i=0; i<latSegments; i++)
+      for(let j=0; j<lonSegments; j++){ const a=i*(lonSegments+1)+j, b=a+lonSegments+1; idx.push(a,b,a+1,b,b+1,a+1); }
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(nrm,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals(); return g;
   }
 
-  // ── LEFT VENTRICLE — thick-walled, dominant, bullet-shaped ──
+  // Anatomy Instances
   const lvGeo = buildChamber(2.25, 2.8, 2.1, 80, 96, (phi,th,x,y,z)=>{
-    // Apex taper — strong conical taper toward bottom
-    const apexFactor = Math.max(0, -y/2.8);
-    const apexTaper  = Math.pow(apexFactor, 1.6)*0.55;
-    // Muscular wall ridges (trabeculae carneae texture)
-    const trabecula  = Math.sin(th*7+phi*5)*0.065 + Math.sin(th*11+phi*3)*0.032 + Math.sin(th*16+phi*8)*0.016;
-    // Anterior-posterior flattening
-    const flatten = Math.cos(th*0.5)*0.12;
-    // Basal bulge at top
-    const basalBulge = Math.max(0, y/2.8)*Math.sin(phi)*0.18;
-    return{
-      dx: trabecula*Math.sin(th)*0.7 + flatten*0.3,
-      dy: -apexTaper*0.9 + trabecula*Math.cos(phi)*0.5 + basalBulge*0.2,
-      dz: trabecula*Math.cos(th)*0.7 + flatten*0.4 + basalBulge
-    };
+    const apexFactor = Math.max(0, -y/2.8); const apexTaper = Math.pow(apexFactor, 1.6)*0.55; const trabecula = Math.sin(th*7+phi*5)*0.065 + Math.sin(th*11+phi*3)*0.032 + Math.sin(th*16+phi*8)*0.016; const flatten = Math.cos(th*0.5)*0.12; const basalBulge = Math.max(0, y/2.8)*Math.sin(phi)*0.18;
+    return{ dx: trabecula*Math.sin(th)*0.7 + flatten*0.3, dy: -apexTaper*0.9 + trabecula*Math.cos(phi)*0.5 + basalBulge*0.2, dz: trabecula*Math.cos(th)*0.7 + flatten*0.4 + basalBulge };
   });
-  const lvMesh = new THREE.Mesh(lvGeo, cardiacMat(0x8b1010, 0x3a0000));
-  lvMesh.position.set(0.2, 0, 0);
-  lvMesh.rotation.z = -0.08;
-  heartGroup.add(lvMesh);
+  const lvMesh = new THREE.Mesh(lvGeo, cardiacMat(0x8b1010, 0x3a0000)); lvMesh.position.set(0.2, 0, 0); lvMesh.rotation.z = -0.08; heartGroup.add(lvMesh);
 
-  // ── PERICARDIUM (outer glistening membrane) — wraps LV, semi-transparent ──
   const periGeo = buildChamber(2.52, 3.05, 2.38, 60, 72, (phi,th,x,y,z)=>{
-    const apexF = Math.max(0,-y/3.05);
-    const apexT = Math.pow(apexF,1.5)*0.52;
-    const bumps = Math.sin(th*4+phi*3)*0.04 + Math.sin(th*8+phi*5)*0.018;
-    return{ dx:bumps*0.4, dy:-apexT*0.85+bumps*0.3, dz:bumps*0.5 };
+    const apexF = Math.max(0,-y/3.05); const apexT = Math.pow(apexF,1.5)*0.52; const bumps = Math.sin(th*4+phi*3)*0.04 + Math.sin(th*8+phi*5)*0.018; return{ dx:bumps*0.4, dy:-apexT*0.85+bumps*0.3, dz:bumps*0.5 };
   });
-  const periMesh = new THREE.Mesh(periGeo, new THREE.MeshPhysicalMaterial({
-    color: 0xcc2a2a,
-    roughness: 0.22,
-    metalness: 0.0,
-    clearcoat: 0.95,
-    clearcoatRoughness: 0.08,
-    reflectivity: 1.0,
-    transparent: true,
-    opacity: 0.35,
-    side: THREE.FrontSide,
-    emissive: new THREE.Color(0x440000),
-    emissiveIntensity: 0.18,
-  }));
-  periMesh.position.set(0.2, 0, 0);
-  periMesh.rotation.z = -0.08;
-  heartGroup.add(periMesh);
+  const periMesh = new THREE.Mesh(periGeo, new THREE.MeshPhysicalMaterial({ color: 0xcc2a2a, roughness: 0.22, metalness: 0.0, clearcoat: isMobile ? 0.1 : 0.95, clearcoatRoughness: 0.08, reflectivity: 1.0, transparent: true, opacity: 0.25, side: THREE.FrontSide, emissive: new THREE.Color(0x440000), emissiveIntensity: 0.18 })); periMesh.position.set(0.2, 0, 0); periMesh.rotation.z = -0.08; heartGroup.add(periMesh);
 
-  // ── RIGHT VENTRICLE — crescent, wraps anterior LV ──
   const rvGeo = buildChamber(1.7, 2.3, 1.45, 56, 68, (phi,th,x,y,z)=>{
-    // flatten toward LV (inward on positive-x side)
-    const inwardSquash = Math.max(0, Math.cos(th+0.5))*0.5;
-    // apex taper
-    const apexF = Math.max(0,-y/2.3);
-    const apexT = Math.pow(apexF,1.5)*0.45;
-    const ridges = Math.sin(th*6+phi*4)*0.048 + Math.sin(th*10+phi*6)*0.022;
-    return{
-      dx: -inwardSquash*0.5 + ridges*0.6,
-      dy: -apexT*0.8 + ridges*0.3,
-      dz: inwardSquash*0.35 + ridges
-    };
+    const inwardSquash = Math.max(0, Math.cos(th+0.5))*0.5; const apexF = Math.max(0,-y/2.3); const apexT = Math.pow(apexF,1.5)*0.45; const ridges = Math.sin(th*6+phi*4)*0.048 + Math.sin(th*10+phi*6)*0.022; return{ dx: -inwardSquash*0.5 + ridges*0.6, dy: -apexT*0.8 + ridges*0.3, dz: inwardSquash*0.35 + ridges };
   });
-  const rvMesh = new THREE.Mesh(rvGeo, cardiacMat(0x7a0e0e, 0x2d0000, 0.48, 0.05));
-  rvMesh.position.set(-1.7, 0.15, 0.5);
-  rvMesh.rotation.z = 0.28;
-  rvMesh.rotation.y = 0.1;
-  heartGroup.add(rvMesh);
+  const rvMesh = new THREE.Mesh(rvGeo, cardiacMat(0x7a0e0e, 0x2d0000, 0.48, 0.05)); rvMesh.position.set(-1.7, 0.15, 0.5); rvMesh.rotation.z = 0.28; rvMesh.rotation.y = 0.1; heartGroup.add(rvMesh);
 
-  // ── LEFT ATRIUM — posterior, rounded dome ──
-  const laGeo = buildChamber(1.35, 1.2, 1.25, 44, 56, (phi,th,x,y,z)=>{
-    const bumps = Math.sin(th*5+phi*3)*0.065 + Math.sin(th*9+phi*6)*0.028;
-    const appendage = Math.max(0,Math.sin(th-0.5)*Math.sin(phi))*0.2; // left atrial appendage
-    return{dx:bumps*0.6+appendage*0.4, dy:bumps*0.4, dz:bumps+appendage*0.6};
-  });
-  const laMesh = new THREE.Mesh(laGeo, cardiacMat(0x991414, 0x3e0000, 0.46, 0.04));
-  laMesh.position.set(0.6, 2.1, -1.05);
-  heartGroup.add(laMesh);
+  const laGeo = buildChamber(1.35, 1.2, 1.25, 44, 56, (phi,th,x,y,z)=>{ const bumps = Math.sin(th*5+phi*3)*0.065 + Math.sin(th*9+phi*6)*0.028; const appendage = Math.max(0,Math.sin(th-0.5)*Math.sin(phi))*0.2; return{dx:bumps*0.6+appendage*0.4, dy:bumps*0.4, dz:bumps+appendage*0.6}; });
+  const laMesh = new THREE.Mesh(laGeo, cardiacMat(0x991414, 0x3e0000, 0.46, 0.04)); laMesh.position.set(0.6, 2.1, -1.05); heartGroup.add(laMesh);
 
-  // ── RIGHT ATRIUM — right posterior, slightly smaller ──
-  const raGeo = buildChamber(1.2, 1.1, 1.05, 44, 56, (phi,th,x,y,z)=>{
-    const bumps = Math.sin(th*5+phi*3)*0.055 + Math.sin(th*9+phi*5)*0.024;
-    const appendage = Math.max(0,Math.sin(th+0.8)*Math.sin(phi))*0.18;
-    return{dx:bumps*0.7+appendage, dy:bumps*0.35, dz:bumps*0.6+appendage*0.5};
-  });
-  const raMesh = new THREE.Mesh(raGeo, cardiacMat(0x881212, 0x380000, 0.49, 0.04));
-  raMesh.position.set(-1.35, 1.9, -0.75);
-  heartGroup.add(raMesh);
+  const raGeo = buildChamber(1.2, 1.1, 1.05, 44, 56, (phi,th,x,y,z)=>{ const bumps = Math.sin(th*5+phi*3)*0.055 + Math.sin(th*9+phi*5)*0.024; const appendage = Math.max(0,Math.sin(th+0.8)*Math.sin(phi))*0.18; return{dx:bumps*0.7+appendage, dy:bumps*0.35, dz:bumps*0.6+appendage*0.5}; });
+  const raMesh = new THREE.Mesh(raGeo, cardiacMat(0x881212, 0x380000, 0.49, 0.04)); raMesh.position.set(-1.35, 1.9, -0.75); heartGroup.add(raMesh);
 
-  // ── INTERVENTRICULAR GROOVE — dark depression between ventricles ──
-  const sulcusCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.3,  2.2,  1.4),
-    new THREE.Vector3(-0.5,  0.9,  1.9),
-    new THREE.Vector3(-0.45,-0.6,  1.75),
-    new THREE.Vector3(-0.2, -1.9,  1.2),
-    new THREE.Vector3( 0.0, -2.7,  0.45),
-  ]);
-  const sulcusGeo = new THREE.TubeGeometry(sulcusCurve, 32, 0.16, 8, false);
-  const sulcusMesh = new THREE.Mesh(sulcusGeo, cardiacMat(0x4a0808, 0x180000, 0.65, 0.02, 0.3));
-  heartGroup.add(sulcusMesh);
+  const sulcusCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(-0.3,2.2,1.4), new THREE.Vector3(-0.5,0.9,1.9), new THREE.Vector3(-0.45,-0.6,1.75), new THREE.Vector3(-0.2,-1.9,1.2), new THREE.Vector3(0.0,-2.7,0.45)]);
+  const sulcusGeo = new THREE.TubeGeometry(sulcusCurve, 20, 0.16, 6, false); const sulcusMesh = new THREE.Mesh(sulcusGeo, cardiacMat(0x4a0808, 0x180000, 0.65, 0.02, 0.3)); heartGroup.add(sulcusMesh);
 
-  // ── ATRIOVENTRICULAR GROOVE — posterior depression at base ──
-  const avGroovePts = [
-    new THREE.Vector3(-1.8, 0.8, -0.3),
-    new THREE.Vector3(-0.8, 1.3, -1.1),
-    new THREE.Vector3( 0.5, 1.5, -1.0),
-    new THREE.Vector3( 1.4, 1.0, -0.3),
-  ];
-  const avGrooveCurve = new THREE.CatmullRomCurve3(avGroovePts);
-  const avGrooveGeo = new THREE.TubeGeometry(avGrooveCurve, 24, 0.13, 8, false);
-  const avGrooveMesh = new THREE.Mesh(avGrooveGeo, cardiacMat(0x4a0808, 0x180000, 0.65, 0.02, 0.3));
-  heartGroup.add(avGrooveMesh);
+  const avGrooveCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(-1.8,0.8,-0.3), new THREE.Vector3(-0.8,1.3,-1.1), new THREE.Vector3(0.5,1.5,-1.0), new THREE.Vector3(1.4,1.0,-0.3)]);
+  const avGrooveGeo = new THREE.TubeGeometry(avGrooveCurve, 16, 0.13, 6, false); const avGrooveMesh = new THREE.Mesh(avGrooveGeo, cardiacMat(0x4a0808, 0x180000, 0.65, 0.02, 0.3)); heartGroup.add(avGrooveMesh);
 
-  // Use heartGroup as heartMesh for the rest of the code
-  const heartMesh = heartGroup;
-  heartMesh.rotation.x = 0.2;
-  heartMesh.castShadow = true;
+  const heartMesh = heartGroup; heartMesh.rotation.x = 0.2;
 
-  // ══════════════════════════════════════════════════════
-  //  VESSEL BUILDER — red arteries / blue veins
-  // ══════════════════════════════════════════════════════
-  function makeVessel(pts, radius, hexColor, emissiveMult=0.45, roughness=0.28){
-    const curve = new THREE.CatmullRomCurve3(pts);
-    const geo   = new THREE.TubeGeometry(curve, 52, radius, 10, false);
-    const col   = new THREE.Color(hexColor);
-    const mat   = new THREE.MeshPhysicalMaterial({
-      color: col,
-      roughness,
-      metalness: 0.04,
-      clearcoat: 0.7,
-      clearcoatRoughness: 0.18,
-      reflectivity: 0.7,
-      emissive: col.clone().multiplyScalar(emissiveMult),
-      emissiveIntensity: 0.55,
-      transparent: false,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    heartGroup.add(mesh);
-    return { curve, mesh };
+  // Vessels Splines
+  function makeVessel(pts, radius, hexColor, emissiveMult=0.45){
+    const curve = new THREE.CatmullRomCurve3(pts); const geo = new THREE.TubeGeometry(curve, isMobile ? 24 : 52, radius, isMobile ? 6 : 10, false); const col = new THREE.Color(hexColor);
+    const mat = new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.3, metalness: 0.02, clearcoat: isMobile ? 0.1 : 0.5, reflectivity: 0.5, emissive: col.clone().multiplyScalar(emissiveMult), emissiveIntensity: 0.55 });
+    const mesh = new THREE.Mesh(geo, mat); heartGroup.add(mesh); return { curve, mesh };
   }
 
-  // ── RED ARTERIES (oxygenated — bright scarlet) ──
+  const aorta = makeVessel([new THREE.Vector3(0.55,1.85,0.5), new THREE.Vector3(0.95,2.95,0.15), new THREE.Vector3(0.55,4.0,-0.4), new THREE.Vector3(-0.35,4.5,-0.6), new THREE.Vector3(-1.1,4.25,-0.45)], 0.38, 0xff1a1a);
+  const pulTrunk = makeVessel([new THREE.Vector3(-0.55,1.75,0.75), new THREE.Vector3(-1.1,2.8,0.65), new THREE.Vector3(-1.7,3.4,0.1)], 0.30, 0x1a6fff, 0.5);
+  const pulLeft = makeVessel([new THREE.Vector3(-1.7,3.4,0.1), new THREE.Vector3(-2.5,3.6,-0.3), new THREE.Vector3(-2.9,3.3,-0.65)], 0.18, 0x2255ee, 0.5);
+  const pulRight = makeVessel([new THREE.Vector3(-1.7,3.4,0.1), new THREE.Vector3(-0.85,3.7,-0.55), new THREE.Vector3(0.25,3.5,-0.75)], 0.16, 0x2255ee, 0.5);
+  const svc = makeVessel([new THREE.Vector3(-1.25,1.75,-0.5), new THREE.Vector3(-1.35,2.9,-0.6), new THREE.Vector3(-1.25,4.05,-0.5)], 0.24, 0x1155dd, 0.5);
+  const ivc = makeVessel([new THREE.Vector3(-1.2,1.4,-0.5), new THREE.Vector3(-1.25,0.3,-0.45), new THREE.Vector3(-1.1,-0.9,-0.3), new THREE.Vector3(-0.8,-2.0,0.0)], 0.20, 0x1144cc, 0.5);
+  const rca = makeVessel([new THREE.Vector3(0.55,1.85,0.5), new THREE.Vector3(1.05,1.05,1.35), new THREE.Vector3(1.15,0.0,1.55), new THREE.Vector3(0.95,-1.05,1.35), new THREE.Vector3(0.55,-1.95,0.9), new THREE.Vector3(0.15,-2.55,0.4)], 0.095, 0xff2020);
+  const lad = makeVessel([new THREE.Vector3(0.2,2.05,1.25), new THREE.Vector3(0.05,0.85,1.9), new THREE.Vector3(-0.08,-0.55,1.8), new THREE.Vector3(-0.05,-1.85,1.3), new THREE.Vector3(0.05,-2.55,0.6)], 0.09, 0xff2828);
+  const cx = makeVessel([new THREE.Vector3(0.2,2.05,1.25), new THREE.Vector3(-0.85,1.55,1.45), new THREE.Vector3(-1.65,0.65,0.95), new THREE.Vector3(-1.95,-0.35,0.45), new THREE.Vector3(-1.55,-1.25,0.1)], 0.08, 0xff1f1f);
+  const diagBranch = makeVessel([new THREE.Vector3(-0.08,-0.55,1.8), new THREE.Vector3(-0.85,-0.95,1.6), new THREE.Vector3(-1.35,-1.55,1.15)], 0.058, 0xff3030);
+  const om = makeVessel([new THREE.Vector3(-1.65,0.65,0.95), new THREE.Vector3(-2.05,0.15,0.55), new THREE.Vector3(-2.15,-0.6,0.25)], 0.052, 0xff2525);
+  const pda = makeVessel([new THREE.Vector3(0.15,-2.55,0.4), new THREE.Vector3(0.05,-2.7,-0.2), new THREE.Vector3(-0.2,-2.8,-0.65), new THREE.Vector3(-0.6,-2.55,-0.95)], 0.06, 0xff1a1a);
+  const pv1 = makeVessel([new THREE.Vector3(0.5,1.9,-0.95), new THREE.Vector3(1.1,2.0,-1.4), new THREE.Vector3(1.6,1.8,-1.65)], 0.14, 0xff1a1a);
+  const pv2 = makeVessel([new THREE.Vector3(0.5,1.9,-0.95), new THREE.Vector3(0.2,2.25,-1.5), new THREE.Vector3(-0.15,2.4,-1.8)], 0.12, 0xff1a1a);
+  const pv3 = makeVessel([new THREE.Vector3(0.5,1.9,-0.95), new THREE.Vector3(1.0,1.55,-1.55), new THREE.Vector3(1.45,1.2,-1.75)], 0.115, 0xee1818);
 
-  // Aorta — ascending arch, exits top-right of LV
-  const aorta = makeVessel([
-    new THREE.Vector3( 0.55,  1.85,  0.5),
-    new THREE.Vector3( 0.95,  2.95,  0.15),
-    new THREE.Vector3( 0.55,  4.0,  -0.4),
-    new THREE.Vector3(-0.35,  4.5,  -0.6),
-    new THREE.Vector3(-1.1,   4.25, -0.45),
-  ], 0.38, 0xff1a1a);
+  const blueVeinPts = [[new THREE.Vector3(0.85,0.6,1.7), new THREE.Vector3(1.4,0.2,1.4), new THREE.Vector3(1.65,-0.5,1.1), new THREE.Vector3(1.45,-1.3,0.7)], [new THREE.Vector3(-0.5,0.4,1.75), new THREE.Vector3(-1.0,-0.2,1.6), new THREE.Vector3(-1.3,-1.0,1.2), new THREE.Vector3(-1.1,-1.8,0.7)], [new THREE.Vector3(0.3,-0.8,1.75), new THREE.Vector3(0.55,-1.5,1.55), new THREE.Vector3(0.45,-2.1,1.15)]];
+  blueVeinPts.forEach(pts => makeVessel(pts, 0.042, 0x1a55ff, 0.6));
 
-  // Pulmonary trunk (carries deoxygenated blood — BLUE — from RV to lungs)
-  const pulTrunk = makeVessel([
-    new THREE.Vector3(-0.55,  1.75,  0.75),
-    new THREE.Vector3(-1.1,   2.8,   0.65),
-    new THREE.Vector3(-1.7,   3.4,   0.1),
-  ], 0.30, 0x1a6fff, 0.5);
-  const pulLeft = makeVessel([
-    new THREE.Vector3(-1.7,   3.4,   0.1),
-    new THREE.Vector3(-2.5,   3.6,  -0.3),
-    new THREE.Vector3(-2.9,   3.3,  -0.65),
-  ], 0.18, 0x2255ee, 0.5);
-  const pulRight = makeVessel([
-    new THREE.Vector3(-1.7,   3.4,   0.1),
-    new THREE.Vector3(-0.85,  3.7,  -0.55),
-    new THREE.Vector3( 0.25,  3.5,  -0.75),
-  ], 0.16, 0x2255ee, 0.5);
-
-  // Superior Vena Cava — BLUE (deoxygenated returns from body)
-  const svc = makeVessel([
-    new THREE.Vector3(-1.25,  1.75, -0.5),
-    new THREE.Vector3(-1.35,  2.9,  -0.6),
-    new THREE.Vector3(-1.25,  4.05, -0.5),
-  ], 0.24, 0x1155dd, 0.5);
-
-  // Inferior Vena Cava — BLUE (exits bottom of RA)
-  const ivc = makeVessel([
-    new THREE.Vector3(-1.2,   1.4,  -0.5),
-    new THREE.Vector3(-1.25,  0.3,  -0.45),
-    new THREE.Vector3(-1.1,  -0.9,  -0.3),
-    new THREE.Vector3(-0.8,  -2.0,   0.0),
-  ], 0.20, 0x1144cc, 0.5);
-
-  // Right Coronary Artery — RED wraps around right AV groove
-  const rca = makeVessel([
-    new THREE.Vector3( 0.55,  1.85,  0.5),
-    new THREE.Vector3( 1.05,  1.05,  1.35),
-    new THREE.Vector3( 1.15,  0.0,   1.55),
-    new THREE.Vector3( 0.95, -1.05,  1.35),
-    new THREE.Vector3( 0.55, -1.95,  0.9),
-    new THREE.Vector3( 0.15, -2.55,  0.4),
-  ], 0.095, 0xff2020);
-
-  // Left Anterior Descending (LAD) — RED, front interventricular groove
-  const lad = makeVessel([
-    new THREE.Vector3( 0.2,   2.05,  1.25),
-    new THREE.Vector3( 0.05,  0.85,  1.9),
-    new THREE.Vector3(-0.08, -0.55,  1.8),
-    new THREE.Vector3(-0.05, -1.85,  1.3),
-    new THREE.Vector3( 0.05, -2.55,  0.6),
-  ], 0.09, 0xff2828);
-
-  // Circumflex — RED, posterior-lateral LV
-  const cx = makeVessel([
-    new THREE.Vector3( 0.2,   2.05,  1.25),
-    new THREE.Vector3(-0.85,  1.55,  1.45),
-    new THREE.Vector3(-1.65,  0.65,  0.95),
-    new THREE.Vector3(-1.95, -0.35,  0.45),
-    new THREE.Vector3(-1.55, -1.25,  0.1),
-  ], 0.08, 0xff1f1f);
-
-  // Diagonal LAD branch — RED
-  const diagBranch = makeVessel([
-    new THREE.Vector3(-0.08, -0.55,  1.8),
-    new THREE.Vector3(-0.85, -0.95,  1.6),
-    new THREE.Vector3(-1.35, -1.55,  1.15),
-  ], 0.058, 0xff3030);
-
-  // Obtuse Marginal (from Cx) — RED
-  const om = makeVessel([
-    new THREE.Vector3(-1.65,  0.65,  0.95),
-    new THREE.Vector3(-2.05,  0.15,  0.55),
-    new THREE.Vector3(-2.15, -0.6,   0.25),
-  ], 0.052, 0xff2525);
-
-  // Posterior Descending Artery — RED, back groove
-  const pda = makeVessel([
-    new THREE.Vector3( 0.15, -2.55,  0.4),
-    new THREE.Vector3( 0.05, -2.7,  -0.2),
-    new THREE.Vector3(-0.2,  -2.8,  -0.65),
-    new THREE.Vector3(-0.6,  -2.55, -0.95),
-  ], 0.06, 0xff1a1a);
-
-  // Pulmonary Veins (return oxygenated blood from lungs) — RED, enter LA posterior
-  const pv1 = makeVessel([
-    new THREE.Vector3( 0.5,   1.9,  -0.95),
-    new THREE.Vector3( 1.1,   2.0,  -1.4),
-    new THREE.Vector3( 1.6,   1.8,  -1.65),
-  ], 0.14, 0xff1a1a);
-  const pv2 = makeVessel([
-    new THREE.Vector3( 0.5,   1.9,  -0.95),
-    new THREE.Vector3( 0.2,   2.25, -1.5),
-    new THREE.Vector3(-0.15,  2.4,  -1.8),
-  ], 0.12, 0xff1a1a);
-  const pv3 = makeVessel([
-    new THREE.Vector3( 0.5,   1.9,  -0.95),
-    new THREE.Vector3( 1.0,   1.55, -1.55),
-    new THREE.Vector3( 1.45,  1.2,  -1.75),
-  ], 0.115, 0xee1818);
-
-  // Small saphenous / marginal veins — BLUE capillary network surface
-  const blueVeinPts = [
-    [new THREE.Vector3( 0.85,  0.6,  1.7), new THREE.Vector3( 1.4,  0.2,  1.4), new THREE.Vector3( 1.65, -0.5, 1.1), new THREE.Vector3( 1.45, -1.3,  0.7)],
-    [new THREE.Vector3(-0.5,   0.4,  1.75), new THREE.Vector3(-1.0, -0.2,  1.6), new THREE.Vector3(-1.3,  -1.0,  1.2), new THREE.Vector3(-1.1, -1.8,  0.7)],
-    [new THREE.Vector3( 0.3,  -0.8,  1.75), new THREE.Vector3( 0.55,-1.5,  1.55), new THREE.Vector3( 0.45,-2.1,  1.15)],
-    [new THREE.Vector3(-0.7,   1.0,  1.5), new THREE.Vector3(-1.2,  0.5,  1.3), new THREE.Vector3(-1.55,-0.3, 1.0)],
-    [new THREE.Vector3( 0.6,  -1.4,  1.45), new THREE.Vector3( 1.0, -1.8,  1.1), new THREE.Vector3( 1.1, -2.3,  0.65)],
-  ];
-  blueVeinPts.forEach(pts => makeVessel(pts, 0.042, 0x1a55ff, 0.6, 0.35));
-
-  // ══════════════════════════════════════════════════════
-  //  FLOWING PARTICLES — red + blue streams along vessels
-  // ══════════════════════════════════════════════════════
-  // Build spline-following particle systems for key vessels
+  // Particle Streams
   function makeFlowParticles(curveObj, count, hexCol, speed){
-    const positions = new Float32Array(count * 3);
-    const offsets   = new Float32Array(count); // 0..1 phase along curve
-    for(let i=0;i<count;i++) offsets[i] = Math.random();
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({
-      color: hexCol,
-      size: 0.07,
-      transparent: true,
-      opacity: 0.92,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    const pts = new THREE.Points(geo, mat);
-    scene.add(pts);
-    return { pts, geo, offsets, curve: curveObj.curve, speed };
+    const pCount = isMobile ? Math.floor(count * 0.5) : count; const positions = new Float32Array(pCount * 3); const offsets = new Float32Array(pCount);
+    for(let i=0; i<pCount; i++) offsets[i] = Math.random();
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({ color: hexCol, size: isMobile ? 0.11 : 0.07, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+    const pts = new THREE.Points(geo, mat); scene.add(pts); return { pts, geo, offsets, curve: curveObj.curve, speed };
   }
 
   const flowSystems = [
-    // Arteries — bright red
-    makeFlowParticles(aorta,    18, 0xff2200, 0.38),
-    makeFlowParticles(rca,      14, 0xff1a00, 0.30),
-    makeFlowParticles(lad,      14, 0xff2200, 0.28),
-    makeFlowParticles(cx,       12, 0xff2000, 0.26),
-    makeFlowParticles(diagBranch, 8, 0xff3300, 0.24),
-    makeFlowParticles(om,        7, 0xff2800, 0.22),
-    makeFlowParticles(pda,       8, 0xff1800, 0.20),
-    makeFlowParticles(pv1,       8, 0xff1500, 0.25),
-    makeFlowParticles(pv2,       7, 0xff1800, 0.23),
-    // Veins — bright blue
-    makeFlowParticles(pulTrunk, 14, 0x2299ff, 0.32),
-    makeFlowParticles(pulLeft,   9, 0x33aaff, 0.28),
-    makeFlowParticles(pulRight,  9, 0x33aaff, 0.27),
-    makeFlowParticles(svc,      10, 0x2288ff, 0.24),
-    makeFlowParticles(ivc,      10, 0x1a77ff, 0.22),
+    makeFlowParticles(aorta, 18, 0xff2200, 0.38), makeFlowParticles(rca, 14, 0xff1a00, 0.30), makeFlowParticles(lad, 14, 0xff2200, 0.28), makeFlowParticles(cx, 12, 0xff2000, 0.26),
+    makeFlowParticles(pulTrunk, 14, 0x2299ff, 0.32), makeFlowParticles(svc, 10, 0x2288ff, 0.24), makeFlowParticles(ivc, 10, 0x1a77ff, 0.22),
   ];
 
-  // Also keep a halo of ambient red+blue particles around the heart
-  const AMBIENT_COUNT = 400;
-  const ambRed = new Float32Array(AMBIENT_COUNT*3);
-  const ambBlue = new Float32Array(AMBIENT_COUNT*3);
-  const ambRedV = [], ambBlueV = [];
-  for(let i=0;i<AMBIENT_COUNT;i++){
+  const AMBIENT_COUNT = isMobile ? 80 : 400;
+  const ambRed = new Float32Array(AMBIENT_COUNT*3); const ambBlue = new Float32Array(AMBIENT_COUNT*3); const ambRedV = [], ambBlueV = [];
+  for(let i=0; i<AMBIENT_COUNT; i++){
     const a=Math.random()*Math.PI*2, r=(Math.random()*0.5+0.35)*4.2;
     ambRed[i*3]=Math.cos(a)*r; ambRed[i*3+1]=(Math.random()-0.5)*6; ambRed[i*3+2]=Math.sin(a)*r;
     ambBlue[i*3]=Math.cos(a+Math.PI)*r*0.85; ambBlue[i*3+1]=(Math.random()-0.5)*5.5; ambBlue[i*3+2]=Math.sin(a+Math.PI)*r*0.85;
     ambRedV.push({x:(Math.random()-0.5)*0.008,y:(Math.random()-0.5)*0.012,z:(Math.random()-0.5)*0.008,spd:0.004+Math.random()*0.018});
     ambBlueV.push({x:(Math.random()-0.5)*0.008,y:(Math.random()-0.5)*0.012,z:(Math.random()-0.5)*0.008,spd:0.004+Math.random()*0.018});
   }
-  const ambRedGeo  = new THREE.BufferGeometry(); ambRedGeo.setAttribute('position',new THREE.Float32BufferAttribute(ambRed,3));
+  const ambRedGeo = new THREE.BufferGeometry(); ambRedGeo.setAttribute('position',new THREE.Float32BufferAttribute(ambRed,3));
   const ambBlueGeo = new THREE.BufferGeometry(); ambBlueGeo.setAttribute('position',new THREE.Float32BufferAttribute(ambBlue,3));
-  const ambRedMat  = new THREE.PointsMaterial({color:0xff2200,size:0.045,transparent:true,opacity:0.65,blending:THREE.AdditiveBlending,depthWrite:false});
-  const ambBlueMat = new THREE.PointsMaterial({color:0x2288ff,size:0.042,transparent:true,opacity:0.60,blending:THREE.AdditiveBlending,depthWrite:false});
-  const ambRedPts  = new THREE.Points(ambRedGeo,  ambRedMat);
-  const ambBluePts = new THREE.Points(ambBlueGeo, ambBlueMat);
+  const ambRedMat = new THREE.PointsMaterial({color:0xff2200,size:0.05,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false});
+  const ambBlueMat = new THREE.PointsMaterial({color:0x2288ff,size:0.05,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending,depthWrite:false});
+  const ambRedPts = new THREE.Points(ambRedGeo, ambRedMat); const ambBluePts = new THREE.Points(ambBlueGeo, ambBlueMat);
   scene.add(ambRedPts); scene.add(ambBluePts);
 
-  // alias for legacy bloodGeo/bloodMat references below
-  const bloodGeo = ambRedGeo;
-  const bloodMat = ambRedMat;
-  const bloodParticles = ambRedPts;
+  const glowGeo = new THREE.SphereGeometry(4.5, 16, 16); const glowMat = new THREE.MeshBasicMaterial({ color:0xcc0000, transparent:true, opacity:0.05, side:THREE.BackSide, blending:THREE.AdditiveBlending, depthWrite:false });
+  const glow = new THREE.Mesh(glowGeo,glowMat); scene.add(glow);
 
-  // ── GLOW HALO ── 
-  const glowGeo = new THREE.SphereGeometry(4.5,32,32);
-  const glowMat = new THREE.MeshBasicMaterial({
-    color:0xcc0000,
-    transparent:true,
-    opacity:0.06,
-    side:THREE.BackSide,
-    blending:THREE.AdditiveBlending,
-    depthWrite:false,
-  });
-  const glow = new THREE.Mesh(glowGeo,glowMat);
-  scene.add(glow);
+  let scrollY = 0; let targetScrollY = 0;
+  window.addEventListener('scroll',()=>{ targetScrollY = window.scrollY; }, { passive: true });
 
-  // Outer halo rings
-  for(let r=0;r<3;r++){
-    const rGeo = new THREE.TorusGeometry(5+r*1.5,0.015,8,80);
-    const rMat = new THREE.MeshBasicMaterial({
-      color:0xff0000,transparent:true,
-      opacity:0.04-r*0.01,
-      blending:THREE.AdditiveBlending,depthWrite:false
-    });
-    const ring = new THREE.Mesh(rGeo,rMat);
-    ring.rotation.x=Math.PI/2+r*0.3;
-    ring.rotation.y=r*0.5;
-    scene.add(ring);
-  }
-
-  // ── FLOATING DUST / SPARKLES — large, vivid ──
-  const DUST = 320;
-  const dustPos = new Float32Array(DUST*3);
-  const dustPhase = new Float32Array(DUST);
-  for(let i=0;i<DUST;i++){
-    dustPos[i*3]=(Math.random()-0.5)*28;
-    dustPos[i*3+1]=(Math.random()-0.5)*18;
-    dustPos[i*3+2]=(Math.random()-0.5)*18;
-    dustPhase[i]=Math.random()*Math.PI*2;
-  }
-  const dustGeo = new THREE.BufferGeometry();
-  dustGeo.setAttribute('position',new THREE.Float32BufferAttribute(dustPos,3));
-  const dustMat = new THREE.PointsMaterial({
-    color:0xff4444,
-    size:0.07,
-    transparent:true,
-    opacity:0.78,
-    blending:THREE.AdditiveBlending,
-    depthWrite:false,
-    sizeAttenuation:true,
-  });
-  const dust = new THREE.Points(dustGeo,dustMat);
-  scene.add(dust);
-
-  // White sparkle layer — bright glitter
-  const SPARKLE = 180;
-  const sparkPos = new Float32Array(SPARKLE*3);
-  for(let i=0;i<SPARKLE;i++){
-    sparkPos[i*3]=(Math.random()-0.5)*22;
-    sparkPos[i*3+1]=(Math.random()-0.5)*16;
-    sparkPos[i*3+2]=(Math.random()-0.5)*14;
-  }
-  const sparkGeo = new THREE.BufferGeometry();
-  sparkGeo.setAttribute('position',new THREE.Float32BufferAttribute(sparkPos,3));
-  const sparkMat = new THREE.PointsMaterial({
-    color:0xffffff,
-    size:0.09,
-    transparent:true,
-    opacity:0.70,
-    blending:THREE.AdditiveBlending,
-    depthWrite:false,
-    sizeAttenuation:true,
-  });
-  const sparkles = new THREE.Points(sparkGeo, sparkMat);
-  scene.add(sparkles);
-
-  // ── SCROLL / PARALLAX ──
-  let scrollY = 0;
-  let targetScrollY = 0;
-  window.addEventListener('scroll',()=>{
-    targetScrollY = window.scrollY;
-  });
-
-  // ── ANIMATION ──
+  // Rendering Loop Matrix
   let time=0;
   function animate(){
-    requestAnimationFrame(animate);
-    time+=0.016;
+    requestAnimationFrame(animate); time+=0.016;
+    scrollY += (targetScrollY - scrollY)*0.05; const scrollProgress = scrollY / (document.body.scrollHeight - window.innerHeight || 1);
 
-    // Smooth scroll interpolation for optical illusion
-    scrollY += (targetScrollY - scrollY)*0.05;
-    const scrollProgress = scrollY / (document.body.scrollHeight - window.innerHeight);
-
-    // Heart beat — realistic 70 bpm rhythm
-    const beatPhase = (time*1.17)%(Math.PI*2);
-    const systole = Math.pow(Math.max(0,Math.sin(beatPhase)),3)*0.12;
-    const diastole = Math.max(0,Math.sin(beatPhase-0.3))*0.04;
-    const beat = 1 + systole + diastole;
+    const beatPhase = (time*1.17)%(Math.PI*2); const systole = Math.pow(Math.max(0,Math.sin(beatPhase)),3)*0.12; const diastole = Math.max(0,Math.sin(beatPhase-0.3))*0.04; const beat = 1 + systole + diastole;
     heartMesh.scale.set(beat,beat,beat);
 
-    // Smooth cursor interpolation
-    mouseX += (targetMouseX - mouseX) * 0.06;
-    mouseY += (targetMouseY - mouseY) * 0.06;
+    mouseX += (targetMouseX - mouseX) * 0.06; mouseY += (targetMouseY - mouseY) * 0.06;
 
-    // Optical illusion: heart slowly rotates + parallax moves opposite to scroll + cursor tilt
-    heartMesh.rotation.y = time*0.12 - scrollProgress*0.8 + mouseX*0.55;
+    if (isMobile && !isTouching) {
+      targetMouseX = Math.sin(time * 0.5) * 0.4; targetMouseY = Math.cos(time * 0.3) * 0.2;
+    }
+
+    heartMesh.rotation.y = time*0.12 - scrollProgress*0.6 + mouseX*0.55;
     heartMesh.rotation.x = 0.2 + Math.sin(time*0.3)*0.08 + scrollProgress*0.15 - mouseY*0.40;
+    heartMesh.position.y = Math.sin(time*0.4)*0.25 - scrollProgress*1.2 + mouseY*0.35; heartMesh.position.x = mouseX*0.30;
 
-    // Vertical float + optical illusion + cursor parallax
-    heartMesh.position.y = Math.sin(time*0.4)*0.25 - scrollProgress*1.5 + mouseY*0.35;
-    heartMesh.position.x = Math.sin(time*0.22)*0.15 + mouseX*0.30;
+    innerGlow.intensity = 2.0 + systole*8; fillLight.intensity = 3.5 + systole*4;
 
-    // Inner glow pulses with heartbeat + tracks cursor
-    innerGlow.intensity = 2.0 + systole*8;
-    innerGlow.position.set(mouseX*0.8, mouseY*0.8, 1.2);
-    fillLight.intensity = 3.5 + systole*4;
-
-    // ── Flow particles along vessel splines ──
     flowSystems.forEach(fs => {
       const posArr = fs.geo.attributes.position.array;
-      for(let i=0;i<fs.offsets.length;i++){
-        fs.offsets[i] = (fs.offsets[i] + fs.speed * 0.016) % 1.0;
-        const pt = fs.curve.getPoint(fs.offsets[i]);
-        // Transform to world: add heartGroup world position offset
-        posArr[i*3]   = pt.x + heartMesh.position.x;
-        posArr[i*3+1] = pt.y + heartMesh.position.y;
-        posArr[i*3+2] = pt.z + heartMesh.position.z;
+      for(let i=0; i<fs.offsets.length; i++){
+        fs.offsets[i] = (fs.offsets[i] + fs.speed * 0.016) % 1.0; const pt = fs.curve.getPoint(fs.offsets[i]);
+        posArr[i*3] = pt.x + heartMesh.position.x; posArr[i*3+1] = pt.y + heartMesh.position.y; posArr[i*3+2] = pt.z + heartMesh.position.z;
       }
-      fs.geo.attributes.position.needsUpdate = true;
-      fs.pts.rotation.copy(heartMesh.rotation);
+      fs.geo.attributes.position.needsUpdate = true; fs.pts.rotation.copy(heartMesh.rotation);
     });
 
-    // ── Ambient cloud particles (red + blue) ──
-    const rap = ambRedGeo.attributes.position.array;
-    const bap = ambBlueGeo.attributes.position.array;
-    for(let i=0;i<AMBIENT_COUNT;i++){
-      const ang = time*ambRedV[i].spd + i*0.8;
-      const r = 3.2 + Math.sin(ang*1.4)*0.9 + systole*2.2;
-      rap[i*3]   += (Math.cos(ang)*r - rap[i*3])*0.018 + ambRedV[i].x*beat;
-      rap[i*3+1] += ambRedV[i].y + systole*0.06;
-      rap[i*3+2] += (Math.sin(ang)*r - rap[i*3+2])*0.018 + ambRedV[i].z*beat;
-      if(Math.abs(rap[i*3+1])>6.5) rap[i*3+1]=-6.5*Math.sign(rap[i*3+1]);
-
-      const bang = time*ambBlueV[i].spd + i*0.9 + Math.PI;
-      const br = 2.8 + Math.sin(bang*1.3)*0.8;
-      bap[i*3]   += (Math.cos(bang)*br - bap[i*3])*0.018 + ambBlueV[i].x;
-      bap[i*3+1] += ambBlueV[i].y;
-      bap[i*3+2] += (Math.sin(bang)*br - bap[i*3+2])*0.018 + ambBlueV[i].z;
-      if(Math.abs(bap[i*3+1])>6.0) bap[i*3+1]=-6.0*Math.sign(bap[i*3+1]);
+    const rap = ambRedGeo.attributes.position.array; const bap = ambBlueGeo.attributes.position.array;
+    for(let i=0; i<AMBIENT_COUNT; i++){
+      const ang = time*ambRedV[i].spd + i*0.8; const r = 3.2 + Math.sin(ang*1.4)*0.9 + systole*2.2;
+      rap[i*3] += (Math.cos(ang)*r - rap[i*3])*0.018 + ambRedV[i].x*beat; rap[i*3+1] += ambRedV[i].y + systole*0.06; rap[i*3+2] += (Math.sin(ang)*r - rap[i*3+2])*0.018 + ambRedV[i].z*beat;
+      const bang = time*ambBlueV[i].spd + i*0.9 + Math.PI; const br = 2.8 + Math.sin(bang*1.3)*0.8;
+      bap[i*3] += (Math.cos(bang)*br - bap[i*3])*0.018 + ambBlueV[i].x; bap[i*3+1] += ambBlueV[i].y; bap[i*3+2] += (Math.sin(bang)*br - bap[i*3+2])*0.018 + ambBlueV[i].z;
     }
-    ambRedGeo.attributes.position.needsUpdate  = true;
-    ambBlueGeo.attributes.position.needsUpdate = true;
+    ambRedGeo.attributes.position.needsUpdate = true; ambBlueGeo.attributes.position.needsUpdate = true;
+    glow.scale.set(beat*1.05, beat*1.05, beat*1.05); glowMat.opacity = 0.04 + systole*0.12;
 
-    ambRedMat.opacity  = 0.55 + systole*0.7;
-    ambRedMat.size     = 0.045 + systole*0.08;
-    ambBlueMat.opacity = 0.50 + systole*0.3;
-    ambBlueMat.color.setHSL(0.62, 1, 0.52 + systole*0.12);
-    ambRedMat.color.setHSL(0, 1, 0.42 + systole*0.22);
-
-    // Glow pulse
-    glow.scale.set(beat*1.05,beat*1.05,beat*1.05);
-    glowMat.opacity = 0.04 + systole*0.12;
-
-    // Camera subtle drift
-    camera.position.x = Math.sin(time*0.08)*0.5;
-    camera.position.y = Math.cos(time*0.06)*0.3 + scrollProgress*(-2);
-    camera.lookAt(0,0,0);
-
-    // Dust + sparkle animation
-    dust.rotation.y = time*0.012;
-    dust.rotation.x = time*0.006;
-    // Twinkling sparkles
-    sparkles.rotation.y = -time*0.008;
-    sparkles.rotation.x = time*0.004;
-    sparkMat.opacity = 0.55 + Math.sin(time*2.5)*0.22 + systole*0.25;
-    dustMat.opacity  = 0.75 + systole*0.20;
-    dustMat.size     = 0.065 + systole*0.04;
-    sparkMat.size    = 0.085 + Math.sin(time*3.1)*0.025 + systole*0.04;
-
-    renderer.render(scene,camera);
+    camera.position.x = Math.sin(time*0.08)*0.3; camera.position.y = scrollProgress*(-2); camera.lookAt(0,0,0);
+    renderer.render(scene, camera);
   }
   animate();
 
-  window.addEventListener('resize',()=>{
-    renderer.setSize(window.innerWidth,window.innerHeight);
-    camera.aspect=window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
-  });
+  window.addEventListener('resize',()=>{ renderer.setSize(window.innerWidth, window.innerHeight); camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); });
 })();
 
-// ══════════════════════════════════════════════════════
-//  SCROLL ANIMATIONS
-// ══════════════════════════════════════════════════════
-const observer = new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting) e.target.classList.add('in');
-  });
-},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+// Scroll Observers
+const observer = new IntersectionObserver((entries)=>{ entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('in'); }); },{threshold:0.1, rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>{ observer.observe(el); });
+window.addEventListener('scroll',()=>{ document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>60); }, { passive: true });
+function ss(id){ const el=document.getElementById(id); if(el)el.scrollIntoView({behavior:'smooth'}); }
 
-document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>{
-  observer.observe(el);
-});
-
-// ── NAV SCROLL ──
-window.addEventListener('scroll',()=>{
-  document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>60);
-});
-
-// ── SMOOTH SCROLL ──
-function ss(id){
-  const el=document.getElementById(id);
-  if(el)el.scrollIntoView({behavior:'smooth'});
-}
-
-// ── COUNTER ANIMATION ──
+// Stat Counters
 function countTo(el,target,suffix='',duration=2000){
   const start=performance.now();
   const update=(ts)=>{
-    const p=Math.min((ts-start)/duration,1);
-    const eased=1-Math.pow(1-p,3);
-    el.textContent=Math.round(eased*target)+suffix;
+    const p=Math.min((ts-start)/duration,1); el.textContent=Math.round((1-Math.pow(1-p,3))*target)+suffix;
     if(p<1)requestAnimationFrame(update);
   };
   requestAnimationFrame(update);
 }
 const heroObs = new IntersectionObserver((entries)=>{
-  if(entries[0].isIntersecting){
-    countTo(document.getElementById('s1'),5000,'');
-    countTo(document.getElementById('s2'),15,'');
-    countTo(document.getElementById('s3'),98,'');
-    heroObs.disconnect();
-  }
+  if(entries[0].isIntersecting){ countTo(document.getElementById('s1'),5000,'+'); countTo(document.getElementById('s2'),15,'+'); countTo(document.getElementById('s3'),98,'%'); heroObs.disconnect(); }
 },{threshold:0.3});
 heroObs.observe(document.getElementById('hero'));
 
-// ── REVIEWS CAROUSEL ──
+// Slider Array
 const REVIEWS=[
   {tag:'Pregnancy Care',text:'I feel truly blessed to have been under the care of Dr. Geetha Rani mam. She was extremely supportive & calm throughout my pregnancy. My journey was safe and comfortable.',name:'Soundharya Chandran'},
   {tag:'Infertility',text:'We were getting treatments for 10 years. We just decided this will be our last try. Dr. Geetha Rani mam gave us the miracle we waited for so long.',name:'David Bernard'},
   {tag:'Fertility',text:'After 5 years of our marriage we are blessed with twin babies because of Dr. Geetha Rani madam in Krithik Medical Centre. 100% trusted hospital.',name:'Karthi Karu'},
   {tag:'High Risk Pregnancy',text:"Dr. Geetha Rani is a life saver. I had a high risk pregnancy and was anxious throughout. Ma'am was very patient and empathetic. Always grateful.",name:'Jasmine Mary'},
-  {tag:'Gynecology',text:'Dr. Geetharani mam always addresses all my queries with patience and provides the best advice. Her dedication and availability make me feel genuinely cared for.',name:'Vani Shree'},
-  {tag:'Fertility',text:'Our dreams come true after 5 years. Best hospital with love, care and support. I will give 100 stars but there was only 5 stars.',name:'Nathiya Karthikeyan'},
-  {tag:'Gynecology',text:"Dr. Geetharani takes care of her patients like a family member, always giving personal attention and making sure we feel comfortable.",name:'Sindhuja Visnujee'},
 ];
-let activeRv=0;
-const dotsEl=document.getElementById('rv-dots');
-REVIEWS.forEach((_,i)=>{
-  const d=document.createElement('button');
-  d.className='rv-dot'+(i===0?' active':'');
-  d.onclick=()=>setReview(i);
-  dotsEl.appendChild(d);
-});
+let activeRv=0; const dotsEl=document.getElementById('rv-dots');
+REVIEWS.forEach((_,i)=>{ const d=document.createElement('button'); d.className='rv-dot'+(i===0?' active':''); d.onclick=()=>setReview(i); dotsEl.appendChild(d); });
 function setReview(i){
-  activeRv=i;
-  const r=REVIEWS[i];
-  const text=document.getElementById('rv-text');
-  text.style.opacity='0';
-  setTimeout(()=>{
-    document.getElementById('rv-tag').textContent=r.tag;
-    text.textContent='"'+r.text+'"';
-    document.getElementById('rv-name').textContent=r.name+' · Verified Patient';
-    text.style.opacity='1';
-  },300);
-  dotsEl.querySelectorAll('.rv-dot').forEach((d,j)=>{
-    d.classList.toggle('active',j===i);
-  });
+  activeRv=i; const r=REVIEWS[i]; const text=document.getElementById('rv-text'); text.style.opacity='0';
+  setTimeout(()=>{ document.getElementById('rv-tag').textContent=r.tag; text.textContent='"'+r.text+'"'; document.getElementById('rv-name').textContent=r.name+' · Verified Patient'; text.style.opacity='1'; },300);
+  dotsEl.querySelectorAll('.rv-dot').forEach((d,j)=>{ d.classList.toggle('active',j===i); });
 }
 setInterval(()=>setReview((activeRv+1)%REVIEWS.length),4500);
 
-// ══════════════════════════════════════════════════════
-//  CUSTOM HEART CURSOR
-// ══════════════════════════════════════════════════════
+// Cursor System Engine (Auto-Deactivated on Mobile screen configurations)
 (function(){
-  const cursor = document.getElementById('custom-cursor');
-  const ring   = document.getElementById('cursor-ring');
-  let cx=window.innerWidth/2, cy=window.innerHeight/2;
-  let rx=cx, ry=cy;
-
-  document.addEventListener('mousemove', e=>{
-    cx = e.clientX; cy = e.clientY;
-    cursor.style.left = cx+'px';
-    cursor.style.top  = cy+'px';
-  });
-
-  // Ring follows with lerp
-  function updateRing(){
-    rx += (cx-rx)*0.12;
-    ry += (cy-ry)*0.12;
-    ring.style.left = rx+'px';
-    ring.style.top  = ry+'px';
-    requestAnimationFrame(updateRing);
-  }
+  const cursor = document.getElementById('custom-cursor'); const ring = document.getElementById('cursor-ring');
+  if(window.innerWidth <= 900) { if(cursor) cursor.style.display = 'none'; if(ring) ring.style.display = 'none'; document.body.style.cursor = 'default'; return; }
+  let cx=window.innerWidth/2, cy=window.innerHeight/2; let rx=cx, ry=cy;
+  document.addEventListener('mousemove', e=>{ cx = e.clientX; cy = e.clientY; cursor.style.left = cx+'px'; cursor.style.top = cy+'px'; });
+  function updateRing(){ rx += (cx-rx)*0.12; ry += (cy-ry)*0.12; ring.style.left = rx+'px'; ring.style.top = ry+'px'; requestAnimationFrame(updateRing); }
   updateRing();
-
-  // Scale up on interactive elements
   document.querySelectorAll('a,button,.btn-blood,.btn-ghost,.svc-card,.why-item,.nav-cta').forEach(el=>{
-    el.addEventListener('mouseenter',()=>{
-      cursor.style.transform='translate(-50%,-50%) scale(1.45)';
-      ring.style.width='80px'; ring.style.height='80px';
-      ring.style.borderColor='rgba(255,80,80,0.7)';
-    });
-    el.addEventListener('mouseleave',()=>{
-      cursor.style.transform='translate(-50%,-50%) scale(1)';
-      ring.style.width='62px'; ring.style.height='62px';
-      ring.style.borderColor='rgba(255,60,60,0.38)';
-    });
+    el.addEventListener('mouseenter',()=>{ cursor.style.transform='translate(-50%,-50%) scale(1.45)'; ring.style.width='80px'; ring.style.height='80px'; ring.style.borderColor='rgba(255,80,80,0.7)'; });
+    el.addEventListener('mouseleave',()=>{ cursor.style.transform='translate(-50%,-50%) scale(1)'; ring.style.width='62px'; ring.style.height='62px'; ring.style.borderColor='rgba(255,60,60,0.38)'; });
   });
-
-  // Click burst
-  document.addEventListener('mousedown',()=>{
-    cursor.style.transform='translate(-50%,-50%) scale(0.82)';
-  });
-  document.addEventListener('mouseup',()=>{
-    cursor.style.transform='translate(-50%,-50%) scale(1)';
-  });
+  document.addEventListener('mousedown',()=>{ cursor.style.transform='translate(-50%,-50%) scale(0.82)'; });
+  document.addEventListener('mouseup',()=>{ cursor.style.transform='translate(-50%,-50%) scale(1)'; });
 })();
+
+// Endpoint Submissions
 async function submitForm(){
-  const name=document.getElementById('f-name').value.trim();
-  const phone=document.getElementById('f-phone').value.trim();
-  const email=document.getElementById('f-email').value.trim();
-  const service=document.getElementById('f-service').value;
-  const date=document.getElementById('f-date').value;
-  const msg=document.getElementById('f-msg').value.trim();
-  const statusEl=document.getElementById('form-status');
+  const name=document.getElementById('f-name').value.trim(); const phone=document.getElementById('f-phone').value.trim(); const email=document.getElementById('f-email').value.trim(); const service=document.getElementById('f-service').value; const date=document.getElementById('f-date').value; const msg=document.getElementById('f-msg').value.trim(); const statusEl=document.getElementById('form-status');
   if(!name||!phone){statusEl.innerHTML='<p class="msg-err">Please fill in your name and phone number.</p>';return;}
   statusEl.innerHTML='<p style="color:rgba(245,240,235,0.4);font-size:11px;letter-spacing:2px;text-align:center;margin-top:12px">SENDING...</p>';
   try{
     await fetch('https://formsubmit.co/ajax/santhosh.mahendran2007@gmail.com',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify({
-        _subject:'New Appointment – Krithik Medical Centre',
-        Name:name,Phone:phone,Email:email||'Not provided',
-        Service:service||'Not specified','Preferred Date':date||'Not specified',Message:msg||'No message'
-      })
+      method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({ _subject:'New Appointment – Krithik Medical Centre', Name:name, Phone:phone, Email:email||'Not provided', Service:service||'Not specified', 'Preferred Date':date||'Not specified', Message:msg||'No message' })
     });
   }catch(e){}
   statusEl.innerHTML='<p class="msg-ok">✓ Appointment request sent. We will contact you shortly.</p>';
   ['f-name','f-phone','f-email','f-msg'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('f-service').value='';
-  document.getElementById('f-date').value='';
+  document.getElementById('f-service').value=''; document.getElementById('f-date').value='';
 }
-</script>
+  </script>
 </body>
 </html>
