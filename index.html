@@ -849,16 +849,22 @@ footer{
   .review-stage{padding:36px 24px;}
   .review-stats{grid-template-columns:repeat(2,1fr);}
 
-  /* Highly Visible Mobile Hero Text Overrides */
+  /* ── MOBILE OVERLAP AND SPACING FIXES ── */
   .hero-inner {
     position: relative;
     z-index: 10;
     background: radial-gradient(circle at left, rgba(2,0,5,0.75) 0%, transparent 85%);
-    padding: 15px;
+    padding: 20px 15px; /* Added slightly more padding */
     border-radius: 8px;
+    margin-top: 60px;   /* Pushes the content down below the fixed navbar */
+  }
+  .hero-eyebrow {
+    margin-bottom: 40px !important; /* Forces the tagline away from the heading */
   }
   #hero .hero-title {
     text-shadow: 0 4px 15px rgba(0, 0, 0, 0.95);
+    line-height: 1.2;  /* Slightly increased line height so mobile wrapped text looks clean */
+    margin-bottom: 20px;
   }
   #hero .hero-sub {
     color: #ffffff !important;
